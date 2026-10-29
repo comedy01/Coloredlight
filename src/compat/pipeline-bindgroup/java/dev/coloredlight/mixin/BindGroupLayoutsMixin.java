@@ -1,0 +1,28 @@
+package dev.coloredlight.mixin;
+
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.mojang.blaze3d.GpuFormat;
+import com.mojang.blaze3d.pipeline.BindGroupLayout;
+import com.mojang.blaze3d.shaders.UniformType;
+import dev.coloredlight.client.LightVolumeBuffer;
+import dev.coloredlight.client.ShaderPatches;
+import net.minecraft.client.renderer.BindGroupLayouts;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+
+/** Adds the light volume texel buffer to the layout every terrain pipeline uses. */
+@Mixin(BindGroupLayouts.class)
+abstract class BindGroupLayoutsMixin {
+    @WrapOperation(method = "<clinit>", at = @At(value = "INVOKE",
+            target = "Lcom/mojang/blaze3d/pipeline/BindGroupLayout$Builder;withUniform(Ljava/lang/String;Lcom/mojang/blaze3d/shaders/UniformType;)Lcom/mojang/blaze3d/pipeline/BindGroupLayout$Builder;"))
+    private static BindGroupLayout.Builder coloredlight$addVolume(BindGroupLayout.Builder builder, String name, UniformType type,
+                                                                  Operation<BindGroupLayout.Builder> original) {
+        BindGroupLayout.Builder result = original.call(builder, name, type);
+        if (!"ChunkSection".equals(name)) {
+            return result;
+        }
+        ShaderPatches.volumeBinding = true;
+        return result.withUniform(LightVolumeBuffer.NAME, UniformType.TEXEL_BUFFER, GpuFormat.RGBA8_UNORM);
+    }
+}

@@ -1,0 +1,6 @@
+{
+	"pack": {
+		"description": "Colored Light self test resources",
+		"pack_format": ${pack_format}
+	}
+}

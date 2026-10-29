@@ -1,0 +1,13 @@
+{
+  "coloredlight.options.title": "Colored Light",
+  "coloredlight.options.enabled": "Colored Light",
+  "coloredlight.options.enabled.tooltip": "Block light takes on the color of the block giving it off: soul fire glows blue, redstone glows red.",
+  "coloredlight.options.intensity": "Color Intensity",
+  "coloredlight.options.intensity.tooltip": "How strongly light is colored. 0% looks like vanilla, 100% is fully colored.",
+  "coloredlight.options.glass_strength": "Glass Strength",
+  "coloredlight.options.glass_strength.tooltip": "How strongly stained glass tints light. 0% = glass barely tints, 100% = default, 300% = extreme.",
+  "coloredlight.options.stained_glass": "Stained Glass Tint",
+  "coloredlight.options.stained_glass.tooltip": "Light that passes through stained glass picks up the color of the glass.",
+  "coloredlight.options.reset": "Reset to Defaults",
+  "coloredlight.options.reset.tooltip": "Put every Colored Light setting back to how it started."
+}

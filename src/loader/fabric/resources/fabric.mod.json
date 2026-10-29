@@ -1,0 +1,41 @@
+{
+	"schemaVersion": 1,
+	"id": "coloredlight",
+	"version": "${version}",
+	"name": "Colored Light",
+	"description": "Colored block light. Torches glow warm, soul fire blue, redstone red, and light shining through stained glass takes on the color of the glass. Works with Sodium. Client-side only.",
+	"icon": {
+		"16": "assets/coloredlight/icon16.png",
+		"32": "assets/coloredlight/icon32.png",
+		"128": "assets/coloredlight/icon128.png"
+	},
+	"authors": [
+		"comedy01"
+	],
+	"license": "MIT",
+	"contact": {
+		"homepage": "https://github.com/comedy01/ColoredLight",
+		"sources": "https://github.com/comedy01/ColoredLight",
+		"issues": "https://github.com/comedy01/ColoredLight/issues"
+	},
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"dev.coloredlight.fabric.ColoredLightFabric"
+		],
+		"modmenu": [
+			"dev.coloredlight.fabric.ColoredLightModMenu"
+		]
+	},
+	"mixins": [
+		"coloredlight.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.15.0",
+		"minecraft": "${range}",
+		"java": ">=${java_version}"
+	},
+	"suggests": {
+		"modmenu": "*"
+	}
+}

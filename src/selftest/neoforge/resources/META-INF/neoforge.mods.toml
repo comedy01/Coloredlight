@@ -1,0 +1,14 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+
+[[mods]]
+modId="coloredlight_selftest"
+version="1.0.0"
+displayName="Colored Light self test"
+
+[[mixins]]
+config="coloredlight_selftest.mixins.json"
+
+[[mixins]]
+config="coloredlight_selftest_neoforge.mixins.json"

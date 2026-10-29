@@ -1,0 +1,104 @@
+package dev.coloredlight.client;
+
+import org.lwjgl.opengl.GL;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL13;
+import org.lwjgl.opengl.GL15;
+import org.lwjgl.opengl.GL31;
+
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
+/**
+ * The light volume on the GPU for the raw GL path, as an RGBA8 buffer texture the terrain shaders read with
+ * texelFetch on a fixed texture unit. A tiny black buffer stands in while there is no volume.
+ */
+public final class GlLightVolume {
+    public static final String NAME = "ColoredLightVolume";
+    public static final int UNIT = 15;
+
+    private static int buffer;
+    private static int texture;
+    private static long size = -1;
+    private static LightTracker.Volume uploaded;
+    private static Boolean supported;
+
+    private GlLightVolume() {
+    }
+
+    /** Buffer textures need OpenGL 3.1; without them the shaders are not given the volume. */
+    public static boolean supported() {
+        if (supported == null) {
+            try {
+                supported = GL.getCapabilities().OpenGL31;
+            } catch (RuntimeException e) {
+                return false;
+            }
+        }
+        return supported;
+    }
+
+    /** Uploads the volume the frame's uniforms describe if it changed. Runs once per frame. */
+    public static void upload() {
+        if (!supported()) {
+            return;
+        }
+        try {
+            LightTracker.Volume volume = LightFrame.volume();
+            if (volume == uploaded && buffer != 0) {
+                return;
+            }
+            if (buffer == 0) {
+                buffer = GL15.glGenBuffers();
+                texture = GL11.glGenTextures();
+            }
+            int previous = GL11.glGetInteger(GL31.GL_TEXTURE_BUFFER);
+            GL15.glBindBuffer(GL31.GL_TEXTURE_BUFFER, buffer);
+            try {
+                upload(volume);
+            } finally {
+                GL15.glBindBuffer(GL31.GL_TEXTURE_BUFFER, previous);
+            }
+            uploaded = volume;
+        } catch (RuntimeException e) {
+            uploaded = null;
+            ColoredLightClient.fail(e);
+        }
+    }
+
+    private static void upload(LightTracker.Volume volume) {
+        if (volume == null) {
+            ByteBuffer black = ByteBuffer.allocateDirect(4).order(ByteOrder.nativeOrder());
+            GL15.glBufferData(GL31.GL_TEXTURE_BUFFER, black, GL15.GL_DYNAMIC_DRAW);
+            size = 4;
+            return;
+        }
+        ByteBuffer data = volume.data().duplicate();
+        data.clear();
+        // A volume patched in place after a block change only needs the bytes the patches touched.
+        if (size == data.capacity() && uploaded != null && uploaded.data() == volume.data()
+                && uploaded.version() == volume.baseVersion()) {
+            int from = volume.dirtyFrom(), to = volume.dirtyTo();
+            if (to > from) {
+                data.position(from);
+                data.limit(to);
+                GL15.glBufferSubData(GL31.GL_TEXTURE_BUFFER, from, data);
+            }
+            return;
+        }
+        GL15.glBufferData(GL31.GL_TEXTURE_BUFFER, data, GL15.GL_DYNAMIC_DRAW);
+        size = data.capacity();
+    }
+
+    /** Binds the buffer texture on {@link #UNIT}, leaving the active texture unit as it was. */
+    public static void bind() {
+        if (buffer == 0 || !supported()) {
+            return;
+        }
+        int active = GL11.glGetInteger(GL13.GL_ACTIVE_TEXTURE);
+        GL13.glActiveTexture(GL13.GL_TEXTURE0 + UNIT);
+        GL11.glBindTexture(GL31.GL_TEXTURE_BUFFER, texture);
+        GL31.glTexBuffer(GL31.GL_TEXTURE_BUFFER, GL11.GL_RGBA8, buffer);
+        GL13.glActiveTexture(active);
+    }
+}

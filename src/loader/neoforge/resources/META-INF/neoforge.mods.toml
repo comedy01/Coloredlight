@@ -1,0 +1,30 @@
+modLoader="javafml"
+loaderVersion="[1,)"
+license="MIT"
+issueTrackerURL="https://github.com/comedy01/ColoredLight/issues"
+
+[[mods]]
+modId="coloredlight"
+version="${version}"
+displayName="Colored Light"
+displayURL="https://github.com/comedy01/ColoredLight"
+iconFile="assets/coloredlight/icon128.png"
+authors="comedy01"
+description='''Colored block light. Torches glow warm, soul fire blue, redstone red, and light shining through stained glass takes on the color of the glass. Works with Sodium. Client-side only.'''
+
+[[mixins]]
+config="coloredlight.mixins.json"
+
+[[dependencies.coloredlight]]
+modId="neoforge"
+type="required"
+versionRange="${neoforge_range}"
+ordering="NONE"
+side="CLIENT"
+
+[[dependencies.coloredlight]]
+modId="minecraft"
+type="required"
+versionRange="${mc_range}"
+ordering="NONE"
+side="CLIENT"
