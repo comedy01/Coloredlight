@@ -9,10 +9,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Binds the light volume with the default uniforms, so every pass that may draw a terrain pipeline has it. Passes
- * whose pipeline does not declare it ignore the extra binding.
- */
 @Mixin(RenderSystem.class)
 abstract class RenderSystemMixin {
     @Inject(method = "bindDefaultUniforms", at = @At("TAIL"))

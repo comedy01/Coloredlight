@@ -22,9 +22,6 @@ vec3 coloredlight_cell(ivec3 c, ivec3 size) {
     return texelFetch(ColoredLightVolume, c.x + size.x * (c.z + size.z * c.y)).rgb;
 }
 
-// The light volume holds the coloured block light of every cell, spread from the sources like vanilla light and
-// tinted by any glass it passed. The hue comes from a trilinear blend of the eight surrounding cells; dark (opaque
-// or unlit) cells do not count, so walls do not pull the colour towards black.
 vec3 coloredlight_tint_at(vec3 pos) {
     if (ColoredLightInfo.y != 1234.5 || ColoredLightInfo.z != 1.0) {
         return vec3(1.0);
@@ -55,7 +52,6 @@ vec3 coloredlight_tint_at(vec3 pos) {
     float strength = clamp(top / weights * 6.0, 0.0, 1.0);
     vec3 tint = mix(vec3(1.0), hue, strength);
     tint = vec3(1.0) + (tint - vec3(1.0)) * ColoredLightInfo.x;
-    // Fade out towards the edge of the volume so colours do not pop as it moves with the camera.
     vec3 edge = min(lp, vec3(size) - 1.0 - lp);
     float fade = clamp(min(edge.x, min(edge.y, edge.z)) / 16.0, 0.0, 1.0);
     return mix(vec3(1.0), tint, fade);
@@ -138,7 +134,6 @@ vec4 coloredlight_sample(sampler2D lightMap, ivec2 uv, vec3 pos) {
     return coloredlight_sample_at(lightMap, vec2(uv), pos);
 }
 
-// With Firelight installed its flicker scales the block light first, then the flickered light is colored.
 vec4 coloredlight_flicker_sample(sampler2D lightMap, ivec2 uv, vec3 pos) {
     vec2 coord = vec2(uv);
 #ifdef FIRELIGHT_GLOBALS

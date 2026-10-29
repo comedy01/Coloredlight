@@ -6,10 +6,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
-/**
- * The per-frame uniforms for the light volume: ColoredLightInfo (intensity, mark, enabled, 0), ColoredLightBox
- * (the volume's minimum corner relative to the camera) and ColoredLightSize (cells per axis).
- */
 public final class LightFrame {
     public static final float MARK = 1234.5f;
     public static final int FLOATS = 12;
@@ -27,7 +23,6 @@ public final class LightFrame {
     }
 
     public static void update(Vec3 camera) {
-        // Block changes since the last tick are patched in now, so a placed torch shows on the very next frame.
         LightTracker.flush();
         float[] frame = FRAME;
         Arrays.fill(frame, 0f);
@@ -70,7 +65,6 @@ public final class LightFrame {
         }
     }
 
-    /** The volume the last frame's uniforms describe, so the GPU data always matches them; null when disabled. */
     public static LightTracker.Volume volume() {
         return shown;
     }

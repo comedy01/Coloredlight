@@ -7,7 +7,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/** Iris binds its shader pack programs here; they take the raw uniforms. */
 @Mixin(value = GlStateManager.class, remap = false)
 abstract class GlUseProgramMixin {
     @Inject(method = "_glUseProgram", at = @At("TAIL"), remap = false)

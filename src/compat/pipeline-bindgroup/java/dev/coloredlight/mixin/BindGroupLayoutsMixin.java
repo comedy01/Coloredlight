@@ -11,7 +11,6 @@ import net.minecraft.client.renderer.BindGroupLayouts;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Adds the light volume texel buffer to the layout every terrain pipeline uses. */
 @Mixin(BindGroupLayouts.class)
 abstract class BindGroupLayoutsMixin {
     @WrapOperation(method = "<clinit>", at = @At(value = "INVOKE",

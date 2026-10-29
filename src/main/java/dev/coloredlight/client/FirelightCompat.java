@@ -2,7 +2,6 @@ package dev.coloredlight.client;
 
 import java.lang.reflect.Method;
 
-/** Lets colored light sit on top of Firelight's flicker when both mods are installed. */
 public final class FirelightCompat {
     private static final int FALLBACK_BYTES = 1040;
     private static final Method PATCH;
@@ -32,12 +31,10 @@ public final class FirelightCompat {
         return BYTES > 0;
     }
 
-    /** Bytes Firelight writes after the uniform block, which colored light must skip past. */
     public static int bytes() {
         return BYTES;
     }
 
-    /** Runs Firelight's shader patch first, so colored light can build on its flicker. */
     public static String patch(String name, String source) {
         if (PATCH == null || source.contains("FIRELIGHT_")) {
             return source;

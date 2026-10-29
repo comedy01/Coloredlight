@@ -6,7 +6,6 @@ import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-/** Iris compiles the gbuffers programs (terrain and the rest) here rather than through GlShader. */
 @Pseudo
 @Mixin(targets = "net.irisshaders.iris.pipeline.programs.ShaderCreator", remap = false)
 abstract class ShaderCreatorMixin {

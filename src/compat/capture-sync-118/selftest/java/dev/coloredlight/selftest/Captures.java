@@ -15,7 +15,7 @@ final class Captures {
     }
 
     static int rgb(NativeImage image, int x, int y) {
-        int c = image.getPixelRGBA(x, y); // ABGR: red is the low byte
+        int c = image.getPixelRGBA(x, y);
         return c & 0xFF00FF00 | (c & 0xFF) << 16 | c >> 16 & 0xFF;
     }
 

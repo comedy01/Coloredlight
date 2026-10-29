@@ -6,10 +6,6 @@ import com.mojang.renderpearl.api.buffers.GpuBuffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-/**
- * The light volume on the GPU, as an RGBA8 texel buffer the terrain shaders read with texelFetch. A tiny black
- * buffer stands in while there is no volume, because the pipelines always expect the binding.
- */
 public final class LightVolumeBuffer {
     public static final String NAME = "ColoredLightVolume";
     private static final int USAGE = GpuBuffer.USAGE_UNIFORM_TEXEL_BUFFER | GpuBuffer.USAGE_COPY_DST;
@@ -21,10 +17,6 @@ public final class LightVolumeBuffer {
     private LightVolumeBuffer() {
     }
 
-    /**
-     * Uploads the volume the frame's uniforms describe if it changed. Runs with the uniforms each frame, before any
-     * render pass is open, because buffer writes are not allowed inside one.
-     */
     public static void upload() {
         LightTracker.Volume volume = LightFrame.volume();
         if (volume != null) {
@@ -38,7 +30,6 @@ public final class LightVolumeBuffer {
         uploaded = null;
     }
 
-    /** The buffer to bind in a terrain pass: the uploaded volume, or the black stand-in. */
     public static GpuBuffer bind() {
         if (uploaded != null && buffer != null && !buffer.isClosed()) {
             return buffer;
@@ -56,7 +47,6 @@ public final class LightVolumeBuffer {
         }
         ByteBuffer data = volume.data().duplicate();
         data.clear();
-        // A volume patched in place after a block change only needs the bytes the patches touched.
         if (buffer != null && !buffer.isClosed() && buffer.size() == data.capacity() && uploaded != null
                 && uploaded.data() == volume.data() && uploaded.version() == volume.baseVersion()) {
             int from = volume.dirtyFrom(), to = volume.dirtyTo();

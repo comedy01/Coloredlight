@@ -21,37 +21,21 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Keeps a box of coloured block light around the camera. The main thread collects one cached scan per chunk section
- * (light sources plus a per-block filter: clear, opaque or glass colour); a background thread spreads the light with
- * {@link LightVolume} and publishes the inner part of the box as RGBA8 texels for the shaders. Block changes do not
- * wait for that: the main thread recomputes just the cells they can reach and writes them into the published volume
- * before the next frame.
- */
 public final class LightTracker {
-    /**
-     * Sections across the compute box, centred on the camera section. Vertically the box is slid to stay inside the
-     * world (plus the margin), so 26 sections cover all of a 384 block world from any height. Both can be overridden
-     * with -Dcoloredlight.sectionsH / -Dcoloredlight.sectionsV; the worker keeps about 13 bytes per cell.
-     */
     private static final int SECTIONS_H = Math.max(3, Integer.getInteger("coloredlight.sectionsH", 12));
     private static final int SECTIONS_V = Math.max(3, Integer.getInteger("coloredlight.sectionsV", 26));
     private static final int BELOW_H = SECTIONS_H / 2;
     private static final int BELOW_V = SECTIONS_V / 2;
     private static final int COMPUTE_H = SECTIONS_H * 16;
     private static final int COMPUTE_V = SECTIONS_V * 16;
-    /** The published box drops one section on every side, so lights just outside it still reach in. */
     private static final int MARGIN = 16;
     private static final int INNER_H = COMPUTE_H - 2 * MARGIN;
     private static final int INNER_V = COMPUTE_V - 2 * MARGIN;
     private static final int INNER_BYTES = INNER_H * INNER_H * INNER_V * 4;
     private static final long[] NO_LIGHTS = new long[0];
     private static final int CACHE_LIMIT = 8192;
-    /** Light dies out within 14 blocks, so a change cannot affect anything 15 or more blocks away. */
     private static final int REACH = 15;
-    /** Changes closer together than this along every axis are patched as one box. */
     private static final int PATCH_SPAN = 16;
-    /** Scattered changes are patched one box each up to this many; beyond it the whole volume is recomputed. */
     private static final int PATCH_BOXES = 8;
     private static final boolean LITTLE = ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN;
 
@@ -61,18 +45,13 @@ public final class LightTracker {
         thread.setDaemon(true);
         return thread;
     });
-    /** The worker's last result, picked up by the main thread. */
     private static final AtomicReference<Finished> FINISHED = new AtomicReference<>();
-    /** Block changes not yet patched in, by position, with the change in the number of light sources. */
     private static final Long2IntOpenHashMap FRESH = new Long2IntOpenHashMap();
-    /** Block changes since the job in flight took its snapshot, patched into its result when it arrives. */
     private static final Long2IntOpenHashMap SINCE_SNAPSHOT = new Long2IntOpenHashMap();
-    /** Retired volume buffers the worker can write its next result into. */
     private static final ByteBuffer[] SPARES = new ByteBuffer[2];
     private static final IntArrayList PATCH_SOURCES = new IntArrayList();
     private static final IntArrayList WORKER_SOURCES = new IntArrayList();
     private static LightVolume.Workspace patchSpace;
-    /** Only touched by the worker thread. */
     private static LightVolume.Workspace workerSpace;
     private static boolean workerHasSpace;
     private static boolean inFlight;
@@ -83,10 +62,8 @@ public final class LightTracker {
     private static boolean lastStained;
     private static int lastGlassStrength = -1;
     private static int version;
-    /** Bumped whenever results in flight become meaningless (level change, mod switched off). */
     private static int epoch;
     private static volatile Volume volume;
-    // Timings for the perf test: computes are written by the worker, patches by the render thread.
     private static volatile long computeNanos;
     private static volatile long computeTotalNanos;
     private static volatile int computes;
@@ -96,11 +73,9 @@ public final class LightTracker {
     private static int patchTo;
     private static boolean patchTinted;
 
-    /** filters is indexed x + 16 * (z + 16 * y) and is null when every block lets light through unchanged. */
     private record Entry(LevelChunkSection section, long[] lights, int[] filters) {
     }
 
-    /** target is a spare buffer to write the result into, or null to allocate one. */
     private record Job(int epoch, int version, int minX, int minY, int minZ, Entry[] entries, boolean stained,
                        ByteBuffer target) {
     }
@@ -108,12 +83,6 @@ public final class LightTracker {
     private record Finished(int epoch, Volume volume) {
     }
 
-    /**
-     * Light colour per cell of the published box, RGBA8 at x + sx * (z + sz * y), with the box's minimum corner at
-     * origin in world coordinates. lights counts the sources inside the box; tinted is true when lit glass is in it.
-     * A patched volume shares data with the one it was patched from: baseVersion is the version that data last
-     * matched as a whole and bytes dirtyFrom..dirtyTo hold everything changed since. A full volume has baseVersion -1.
-     */
     public record Volume(int originX, int originY, int originZ, int sx, int sy, int sz, ByteBuffer data, int lights,
                          boolean tinted, int version, boolean stained, int baseVersion, int dirtyFrom, int dirtyTo) {
         public int colorAt(int x, int y, int z) {
@@ -138,18 +107,15 @@ public final class LightTracker {
         return current == null ? 0 : current.lights();
     }
 
-    /** Milliseconds the last full compute took on the worker. */
     public static double lastComputeMs() {
         return computeNanos / 1e6;
     }
 
-    /** Average milliseconds of all full computes so far. */
     public static double averageComputeMs() {
         int n = computes;
         return n == 0 ? 0 : computeTotalNanos / 1e6 / n;
     }
 
-    /** Milliseconds the slowest block change patch on the render thread took since the last reset. */
     public static double maxPatchMs() {
         return patchMaxNanos / 1e6;
     }
@@ -168,7 +134,6 @@ public final class LightTracker {
         return current != null && current.tinted();
     }
 
-    /** Packed rgb light at a world cell, 0 when dark or outside the published box. */
     public static int colorAt(int x, int y, int z) {
         Volume current = volume;
         return current == null ? 0 : current.colorAt(x, y, z);
@@ -197,7 +162,6 @@ public final class LightTracker {
         }
     }
 
-    /** Patches pending block changes into the volume; runs before each frame so a placed light shows at once. */
     public static void flush() {
         if (FRESH.isEmpty() && FINISHED.get() == null) {
             return;
@@ -248,7 +212,6 @@ public final class LightTracker {
 
         int minSy = Levels.minSectionY(level);
         int maxSy = Levels.maxSectionY(level);
-        // Slide the box vertically to stay inside the world (one margin section past each end) where it fits.
         int baseSy = Math.max(minSy - 1, Math.min(csy - BELOW_V, maxSy + 2 - SECTIONS_V));
         Entry[] entries = new Entry[SECTIONS_H * SECTIONS_H * SECTIONS_V];
         for (int ix = 0; ix < SECTIONS_H; ix++) {
@@ -301,7 +264,6 @@ public final class LightTracker {
         }
     }
 
-    /** Takes in the worker's result, then patches in the block changes it does not have yet. */
     private static void sync() {
         Finished done = FINISHED.getAndSet(null);
         if (done != null) {
@@ -314,7 +276,6 @@ public final class LightTracker {
                     retire(old.data());
                 }
                 apply(SINCE_SNAPSHOT);
-                // Everything still fresh happened after the snapshot, so it was just patched in.
                 FRESH.clear();
             } else if (result != null) {
                 retire(result.data());
@@ -335,12 +296,10 @@ public final class LightTracker {
         if (patched != null) {
             volume = patched;
         } else if (volume != null || !inFlight) {
-            // Too much changed to patch, or nothing to patch yet: recompute the lot.
             generation++;
         }
     }
 
-    /** The volume with the cells the changes can reach recomputed, or null when there are too many to patch. */
     private static Volume patch(Volume v, Long2IntOpenHashMap changes) {
         long[] keys = changes.keySet().toLongArray();
         int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
@@ -379,7 +338,6 @@ public final class LightTracker {
         }
         int base = v.version(), from = patchFrom, to = patchTo;
         if (v.baseVersion() >= 0 && v != LightFrame.volume()) {
-            // v was itself patched since the GPU last saw this data, so its changes still need uploading too.
             base = v.baseVersion();
             from = Math.min(from, v.dirtyFrom());
             to = Math.max(to, v.dirtyTo());
@@ -388,7 +346,6 @@ public final class LightTracker {
                 v.tinted() || patchTinted, ++version, v.stained(), base, from, to);
     }
 
-    /** Recomputes the cells of v that a change in the inclusive box x0..x1, y0..y1, z0..z1 can reach, in place. */
     private static void patchBox(Volume v, int x0, int y0, int z0, int x1, int y1, int z1) {
         int ox = v.originX(), oy = v.originY(), oz = v.originZ();
         int ax = Math.max(ox, x0 - REACH), ay = Math.max(oy, y0 - REACH), az = Math.max(oz, z0 - REACH);
@@ -398,7 +355,6 @@ public final class LightTracker {
         if (ax >= bx || ay >= by || az >= bz) {
             return;
         }
-        // Everything that can light the output, clipped to the box a full compute would have seen.
         int ix0 = Math.max(ox - MARGIN, ax - REACH), iy0 = Math.max(oy - MARGIN, ay - REACH);
         int iz0 = Math.max(oz - MARGIN, az - REACH);
         int ix1 = Math.min(ox + v.sx() + MARGIN, bx + REACH), iy1 = Math.min(oy + v.sy() + MARGIN, by + REACH);
@@ -448,10 +404,6 @@ public final class LightTracker {
         patchTo = Math.max(patchTo, (LightVolume.index(v.sx(), v.sz(), bx - 1 - ox, by - 1 - oy, bz - 1 - oz) + 1) * 4);
     }
 
-    /**
-     * Fills filters and sources for a w * h * d box from a grid of nw * nh * nd sections, indexed
-     * ix + nw * (iz + nd * iy); the box starts offX, offY, offZ blocks into the grid. Missing sections are clear.
-     */
     private static void gather(Entry[] entries, int nw, int nh, int nd, int offX, int offY, int offZ, int w, int h,
                                int d, boolean stained, int[] filters, IntArrayList sources) {
         sources.clear();
@@ -505,7 +457,6 @@ public final class LightTracker {
         }
     }
 
-    /** Writes count cells of light from index from as RGBA8 at byte at; true when one of them is lit glass. */
     private static boolean write(ByteBuffer data, int at, int[] light, int[] filters, int from, int count) {
         boolean tinted = false;
         for (int i = 0; i < count; i++) {
@@ -551,7 +502,6 @@ public final class LightTracker {
                 data, lights, tinted, job.version(), job.stained(), -1, 0, INNER_BYTES);
     }
 
-    /** Keeps a no longer published volume buffer for the worker to reuse. */
     private static void retire(ByteBuffer data) {
         if (data.capacity() != INNER_BYTES || data == SPARES[0] || data == SPARES[1]) {
             return;
@@ -566,7 +516,6 @@ public final class LightTracker {
         }
     }
 
-    /** A spare buffer neither the current nor the last shown volume uses, or null. */
     private static ByteBuffer takeSpare() {
         Volume shown = LightFrame.volume();
         Volume current = volume;
@@ -589,7 +538,6 @@ public final class LightTracker {
         return filter != LightColor.WHITE && filter != LightColor.OPAQUE && filter != LightColor.NONE;
     }
 
-    /** True when swapping before for after changes nothing the light volume sees. */
     private static boolean sameLight(BlockState before, BlockState after) {
         int emission = Math.min(15, after.getLightEmission());
         return Math.min(15, before.getLightEmission()) == emission && filterOf(before) == filterOf(after)
@@ -627,7 +575,6 @@ public final class LightTracker {
         return entry;
     }
 
-    /** Light sources pack as x | z << 4 | y << 8 | level << 12 | rgb << 16. */
     static Entry scan(LevelChunkSection section) {
         if (Levels.onlyAir(section)) {
             return new Entry(section, NO_LIGHTS, null);
@@ -663,7 +610,6 @@ public final class LightTracker {
         return new Entry(section, count == 0 ? NO_LIGHTS : Arrays.copyOf(found, count), filters);
     }
 
-    /** Drops the published volume and makes the next active tick recompute it. */
     private static void invalidate() {
         epoch++;
         volume = null;
@@ -674,7 +620,6 @@ public final class LightTracker {
         Arrays.fill(SPARES, null);
     }
 
-    /** Lets go of the compute workspaces while the volume is not needed. */
     private static void release() {
         patchSpace = null;
         if (workerHasSpace) {

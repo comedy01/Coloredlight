@@ -6,7 +6,6 @@ import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-/** Iris compiles shader pack programs through its own GlShader, which calls GL directly and skips the GlStateManager hook. */
 @Pseudo
 @Mixin(targets = "net.irisshaders.iris.gl.shader.GlShader", remap = false)
 abstract class GlShaderMixin {

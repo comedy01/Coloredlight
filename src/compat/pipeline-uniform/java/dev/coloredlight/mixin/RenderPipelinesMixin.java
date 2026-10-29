@@ -11,7 +11,6 @@ import net.minecraft.client.renderer.RenderPipelines;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
-/** Adds the light volume texel buffer to the snippet every terrain pipeline is built from. */
 @Mixin(RenderPipelines.class)
 abstract class RenderPipelinesMixin {
     @WrapOperation(method = "<clinit>", at = @At(value = "INVOKE",

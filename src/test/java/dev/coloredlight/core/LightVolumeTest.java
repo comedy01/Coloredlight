@@ -19,7 +19,6 @@ class LightVolumeTest {
         return filters;
     }
 
-    /** Fills the whole plane at x with one filter, so no light leaks around it. */
     private static void wall(int[] filters, int x, int filter) {
         for (int y = 0; y < N; y++) {
             for (int z = 0; z < N; z++) {

@@ -21,7 +21,6 @@ public final class LightColor {
         return (int) Math.round(r * 255) << 16 | (int) Math.round(g * 255) << 8 | (int) Math.round(b * 255);
     }
 
-    /** Light color for a block, by its registry path (e.g. "wall_torch"). */
     public static int forBlock(String name) {
         if (name.contains("soul")) {
             return rgb(0.35, 0.6, 1);
@@ -70,7 +69,6 @@ public final class LightColor {
         return rgb(1, 0.92, 0.8);
     }
 
-    /** Filter color for a block: a dye color for stained glass, OPAQUE for tinted glass, NONE otherwise. */
     public static int filter(String name) {
         if (name.equals("tinted_glass")) {
             return OPAQUE;

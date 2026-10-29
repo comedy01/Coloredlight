@@ -9,10 +9,6 @@ import org.lwjgl.opengl.GL31;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-/**
- * The light volume on the GPU for the raw GL path, as an RGBA8 buffer texture the terrain shaders read with
- * texelFetch on a fixed texture unit. A tiny black buffer stands in while there is no volume.
- */
 public final class GlLightVolume {
     public static final String NAME = "ColoredLightVolume";
     public static final int UNIT = 15;
@@ -26,7 +22,6 @@ public final class GlLightVolume {
     private GlLightVolume() {
     }
 
-    /** Buffer textures need OpenGL 3.1; without them the shaders are not given the volume. */
     public static boolean supported() {
         if (supported == null) {
             try {
@@ -38,7 +33,6 @@ public final class GlLightVolume {
         return supported;
     }
 
-    /** Uploads the volume the frame's uniforms describe if it changed. Runs once per frame. */
     public static void upload() {
         if (!supported()) {
             return;
@@ -75,7 +69,6 @@ public final class GlLightVolume {
         }
         ByteBuffer data = volume.data().duplicate();
         data.clear();
-        // A volume patched in place after a block change only needs the bytes the patches touched.
         if (size == data.capacity() && uploaded != null && uploaded.data() == volume.data()
                 && uploaded.version() == volume.baseVersion()) {
             int from = volume.dirtyFrom(), to = volume.dirtyTo();
@@ -90,7 +83,6 @@ public final class GlLightVolume {
         size = data.capacity();
     }
 
-    /** Binds the buffer texture on {@link #UNIT}, leaving the active texture unit as it was. */
     public static void bind() {
         if (buffer == 0 || !supported()) {
             return;

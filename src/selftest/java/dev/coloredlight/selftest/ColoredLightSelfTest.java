@@ -420,7 +420,6 @@ public final class ColoredLightSelfTest {
         then(5, () -> hideHud = false);
     }
 
-    /** A torch alone in a pitch dark room, then the same torch boxed in blue stained glass, filmed for a few seconds each. */
     private void glassFilmScene(Minecraft mc) {
         int f = ServerCompat.FLOOR;
         then(1, () -> {
@@ -448,7 +447,6 @@ public final class ColoredLightSelfTest {
     }
 
     private void galleryScene(Minecraft mc) {
-        // Strong settings, and a pitch dark room lit only by one lamp shining through one stained-glass block per shot.
         then(1, () -> {
             ColoredLightClient.config().setIntensityPercent(ColoredLightConfig.MAX_INTENSITY);
             ColoredLightClient.config().setGlassStrengthPercent(ColoredLightConfig.MAX_GLASS_STRENGTH);
@@ -461,7 +459,6 @@ public final class ColoredLightSelfTest {
             then(5, () -> glassWindow(mc, color));
             shot(mc, color + "-glass", camera);
         }
-        // Six bays split by fins, each lit by one lamp behind its own glass color, then by its own colored light block.
         String[] glass = {"red", "orange", "lime", "cyan", "blue", "purple"};
         String[] lamps = {"redstone_torch", "ochre_froglight", "verdant_froglight", "soul_lantern", "sea_lantern", "pearlescent_froglight"};
         String wide = "0.5 " + (f + 4) + " 11.5 180 22";
@@ -486,7 +483,6 @@ public final class ColoredLightSelfTest {
         then(5, () -> hideHud = false);
     }
 
-    /** A solid wall at z = -5 with one stained-glass block in it, and one sea lantern sealed right behind the glass. */
     private void glassWindow(Minecraft mc, String color) {
         int f = ServerCompat.FLOOR;
         run(mc, "fill -5 " + f + " -5 5 " + (f + 4) + " -5 minecraft:polished_deepslate");
@@ -494,7 +490,6 @@ public final class ColoredLightSelfTest {
         run(mc, "setblock 0 " + (f + 1) + " -6 minecraft:sea_lantern");
     }
 
-    /** A solid back wall at z = -5 and fins between six bays centred on x = -10, -6, ..., 10. */
     private void bays(Minecraft mc) {
         int f = ServerCompat.FLOOR;
         run(mc, "fill -12 " + f + " -5 12 " + (f + 4) + " -5 minecraft:polished_deepslate");
@@ -503,7 +498,6 @@ public final class ColoredLightSelfTest {
         }
     }
 
-    /** Builds a closed dark room with interior x1..x2, z1..z2 and five blocks of headroom. */
     private void room(Minecraft mc, int x1, int z1, int x2, int z2, String wall, String floor) {
         int f = ServerCompat.FLOOR;
         then(5, () -> {
@@ -560,7 +554,6 @@ public final class ColoredLightSelfTest {
         }
         then(0, () -> log(String.format(Locale.ROOT, "full compute: last %.1f ms, average %.1f ms",
                 LightTracker.lastComputeMs(), LightTracker.averageComputeMs())));
-        // Places and breaks torches near the camera one per few ticks, measuring the render thread patch cost.
         then(0, () -> {
             LightTracker.resetTimings();
             worstFrameNanos = 0;
@@ -581,18 +574,11 @@ public final class ColoredLightSelfTest {
             "lantern", "soul_lantern", "glowstone", "sea_lantern", "shroomlight", "end_rod", "jack_o_lantern"};
     private static final String[] STRESS_GLASS = {"red", "lime", "blue", "magenta", "yellow", "cyan", "orange", "purple"};
 
-    /**
-     * A much heavier scene than perfScene: thousands of mixed light sources under coloured glass, tall light
-     * pillars across the full height, the camera flying across sections, and whole rows of lights toggling every
-     * tick. Every phase runs with the mod off and on, twice, and logs average fps, 1% low fps and the worst frame.
-     */
     private void stressScene(Minecraft mc) {
         ColoredLightConfig config = ColoredLightClient.config();
         int f = ServerCompat.FLOOR;
         then(10, () -> {
             Ui.unlock(mc);
-            // The default AFK limit drops the game to 30 fps after a minute without input, which would swamp
-            // every measurement in this long unattended run.
             noAfkLimit(mc);
             run(mc, "time set midnight");
             run(mc, "tp @p 0.5 " + (f + 40) + " 0.5");
@@ -602,7 +588,6 @@ public final class ColoredLightSelfTest {
                 run(mc, "fill -60 " + (f - 1) + " " + z + " 60 " + (f - 1) + " " + Math.min(60, z + 29) + " minecraft:stone_bricks");
             }
         });
-        // Rows of lights every 3 blocks, each row a different source, every other row under stained glass.
         then(5, () -> {
             int row = 0;
             for (int z = -60; z <= 60; z += 3, row++) {
@@ -614,7 +599,6 @@ public final class ColoredLightSelfTest {
                 }
             }
         });
-        // Tall pillars of light sources, so the volume is busy over its whole height.
         then(5, () -> {
             int i = 0;
             for (int x = -48; x <= 48; x += 24) {
@@ -665,7 +649,6 @@ public final class ColoredLightSelfTest {
             perfFrames = frames;
             perfStart = System.nanoTime();
         });
-        // Six seconds at 20 ticks per second.
         for (int i = 0; i < 120; i++) {
             then(1, everyTick);
         }
@@ -841,14 +824,12 @@ public final class ColoredLightSelfTest {
         return false;
     }
 
-    // The AFK fps limit (1.21.2+) is set by reflection so the shared source still compiles on older versions.
     static void noAfkLimit(Minecraft mc) {
         try {
             Object option = mc.options.getClass().getMethod("inactivityFpsLimit").invoke(mc.options);
             Class<?> limit = Class.forName("net.minecraft.client.InactivityFpsLimit");
             option.getClass().getMethod("set", Object.class).invoke(option, limit.getField("MINIMIZED").get(null));
         } catch (ReflectiveOperationException e) {
-            // older version (no AFK limit) or obfuscated names; nothing to do
         }
     }
 

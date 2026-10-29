@@ -139,7 +139,6 @@ public final class TerrainProgram {
     }
 
     private static boolean create() {
-        // The light volume is a samplerBuffer, which needs GLSL 1.40+; the compatibility profile keeps the built-ins.
         boolean volume = GlLightVolume.supported() && GL.getCapabilities().OpenGL32;
         String version = volume ? "#version 150 compatibility\n" : "#version 120\n";
         String vertex;

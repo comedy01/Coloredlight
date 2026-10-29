@@ -40,7 +40,6 @@ public final class ShaderPatches {
             new Block(SODIUM_GLOBALS, "layout(std140)uniformu_Globals{mat4u_ProjectionMatrix;mat4u_ModelViewMatrix;"
                     + "vec4u_FogColor;vec2u_EnvironmentFog;vec2u_RenderFog;vec2u_TexelSize;vec2u_TexCoordShrink;floatu_FadePeriodInv;boolu_UseRGSS;};",
                     "bool u_UseRGSS;"),
-            // The same blocks after Firelight added its fields.
             new Block(VANILLA_GLOBALS, "layout(std140)uniformGlobals{ivec3CameraBlockPos;floatGlintAlpha;vec3CameraOffset;"
                     + "floatGameTime;vec2ScreenSize;intMenuBlurRadius;intUseRgss;" + FIRELIGHT_FIELDS + "};", FIRELIGHT_LAST),
             new Block(VANILLA_GLOBALS, "layout(std140)uniformGlobals{ivec3CameraBlockPos;vec3CameraOffset;vec2ScreenSize;"
@@ -62,7 +61,6 @@ public final class ShaderPatches {
                     "v_LightCoord = _vert_tex_light_coord;\n    v_Color.rgb *= coloredlight_vertex_tint(_vert_tex_light_coord, position);", true, true),
             new Terrain(SODIUM_TERRAIN, "vec3 pos = ", "v_LightCoord = a_LightCoord;",
                     "v_LightCoord = a_LightCoord;\n    v_Color.rgb *= coloredlight_vertex_tint(a_LightCoord, pos);", true, true),
-            // Terrain Firelight already patched: keep its flicker and color the flickered light.
             new Terrain(VANILLA_TERRAIN, "vec3 pos = ", "vertexColor = Color * firelight_sample(Sampler2, UV2, pos);",
                     "vertexColor = Color * coloredlight_flicker_sample(Sampler2, UV2, pos);", false, false),
             new Terrain(SODIUM_TERRAIN, "vec3 position = ", "v_Color = _vert_color * texture(u_LightTex, firelight_coord(_vert_tex_light_coord, position));",
@@ -73,7 +71,6 @@ public final class ShaderPatches {
                     "v_LightCoord = firelight_coord(_vert_tex_light_coord, position);\n    v_Color.rgb *= coloredlight_vertex_tint(_vert_tex_light_coord, position);", true, true),
             new Terrain(SODIUM_TERRAIN, "vec3 pos = ", "v_LightCoord = firelight_coord(a_LightCoord, pos);",
                     "v_LightCoord = firelight_coord(a_LightCoord, pos);\n    v_Color.rgb *= coloredlight_vertex_tint(a_LightCoord, pos);", true, true),
-            // Iris gbuffers terrain from shader packs (Complementary and alike): tint the vertex color the pack lights with.
             new Terrain(IRIS_TERRAIN, "getVertexPosition()", "glColor = _vert_color;",
                     "glColor = _vert_color;\n    glColor.rgb *= coloredlight_vertex_tint(_vert_tex_light_coord, getVertexPosition().xyz);", false, true),
             new Terrain(IRIS_TERRAIN, "getVertexPosition()", "glColorRaw = _vert_color;",
@@ -83,10 +80,6 @@ public final class ShaderPatches {
     private static final String HALF_TEXEL = "#define COLOREDLIGHT_HALF_TEXEL\n";
     private static final String VOLUME = "#define COLOREDLIGHT_VOLUME\nuniform samplerBuffer ColoredLightVolume;\n";
 
-    /**
-     * Set once the terrain pipelines carry the light volume binding, so their shaders may declare it. Only
-     * core/terrain gets it: core/block shares the patch but its pipelines have no such binding.
-     */
     public static volatile boolean volumeBinding;
     private static final Pattern VERSION = Pattern.compile("#version\\s+(\\d+)");
 
@@ -105,7 +98,6 @@ public final class ShaderPatches {
             return source;
         }
         try {
-            // Iris programs get raw uniforms; adding fields to their u_Globals copy would clash with those names.
             String patched = name.startsWith("iris") ? source : globals(FirelightCompat.patch(name, source));
             patched = terrain(name, patched);
             return patched;
@@ -151,7 +143,6 @@ public final class ShaderPatches {
             int found = source.indexOf(terrain.find());
             int main = source.indexOf("void main()");
             if (main > found) {
-                // The find is in a helper called from main (Iris' iris_depthMain): our code must come before it.
                 main = source.lastIndexOf("\nvoid ", found) + 1;
             }
             if (main <= 0) {
@@ -179,7 +170,6 @@ public final class ShaderPatches {
         return source;
     }
 
-    /** The 1.16.5 terrain vertex shader; the volume needs GLSL 1.40+ (samplerBuffer), so the caller picks the version. */
     public static String legacyTerrain(String version, boolean volume, String body) throws IOException {
         APPLIED.add(VANILLA_TERRAIN);
         APPLIED.add(VANILLA_TERRAIN + "-raw");

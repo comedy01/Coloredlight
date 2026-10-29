@@ -1,25 +1,10 @@
 package dev.coloredlight.core;
 
-/**
- * Coloured block light over a box of cells, spread like vanilla block light: one level (17 of 255) is lost per
- * step and opaque cells stop it. White and tinted light spread as two layers, so a bright white torch cannot
- * drown the hue of light that came through glass; the result keeps the brightest layer's brightness and mixes
- * the hue with the tinted layer weighted up. Glass tints light that passes straight through it, and tinted
- * light never passes back through the glass it came through, so it stays on the far side.
- */
 public final class LightVolume {
-    /** Brightness lost per block, matching one vanilla light level on a 0..255 scale. */
     public static final int STEP = 17;
-    /** Glass never removes a channel entirely, so dark glass still lets a little through. */
     private static final float FLOOR = 0.15f;
-    /** How much more the tinted layer counts than white light when the hue of a cell is mixed. */
     private static final float BOOST = 3.5f;
-    /** Marks queue entries of the tinted layer. */
     private static final int TINT = 1 << 30;
-    /**
-     * How strongly glass tints: 1 is the tuned look, 0 makes glass clear, higher values deepen the tint. Both the
-     * filter channels and the tinted layer's weight are raised to this power.
-     */
     private static volatile float glassStrength = 1f;
     private LightVolume() {
     }
@@ -28,10 +13,6 @@ public final class LightVolume {
         glassStrength = Math.max(0f, strength);
     }
 
-    /**
-     * Arrays for a compute, kept between computes so a box computed every frame or every few ticks does not
-     * allocate megabytes each time. Directions are +x, -x, +y, -y, +z, -z, so the opposite of d is d ^ 1.
-     */
     public static final class Workspace {
         private int[] light = new int[0];
         private int[] tint = new int[0];
@@ -49,7 +30,6 @@ public final class LightVolume {
             this.filters = filters;
         }
 
-        /** Makes room for a box of the given cells and clears its light; the filters are left for the caller to fill. */
         public void prepare(int cells) {
             if (light.length < cells) {
                 light = new int[cells];
@@ -64,31 +44,19 @@ public final class LightVolume {
             queue.reset();
         }
 
-        /** One filter per cell at {@link #index}, as for {@link #compute(int, int, int, int[], int[])}. */
         public int[] filters() {
             return filters;
         }
     }
 
-    /**
-     * filters holds one entry per cell at {@link #index}: {@link LightColor#WHITE} lets light pass,
-     * {@link LightColor#OPAQUE} stops it, anything else is a glass colour. sources holds groups of
-     * (x, y, z, level, rgb); sources outside the box are ignored. Returns packed rgb per cell.
-     */
     public static int[] compute(int sx, int sy, int sz, int[] filters, int[] sources) {
         return compute(new Workspace(sx * sy * sz, filters), sx, sy, sz, sources, sources.length);
     }
 
-    /**
-     * Like {@link #compute(int, int, int, int[], int[])}, reusing the workspace's arrays. The workspace must have
-     * been {@link Workspace#prepare prepared} for the box and its filters filled in; only the first sourceLength
-     * entries of sources are read. Returns the workspace's light array, which may be longer than the box.
-     */
     public static int[] compute(Workspace ws, int sx, int sy, int sz, int[] sources, int sourceLength) {
         int cells = sx * sy * sz;
         int[] light = ws.light;
         int[] tint = ws.tint;
-        // For tinted light: 1 + the direction it last crossed glass in, 0 when it never did.
         byte[] crossed = ws.crossed;
         int[] filters = ws.filters;
         Buckets queue = ws.queue;
@@ -111,7 +79,6 @@ public final class LightVolume {
             spread(tinted ? tint : light, crossed, queue, index(sx, sz, x, y, z), tinted, r << 16 | g << 8 | b, (byte) 0);
         }
         int plane = sx * sz;
-        // Index offsets per direction, in the order of STEPS.
         int[] offsets = {1, -1, plane, -plane, sx, -sx};
         int lastFilter = LightColor.WHITE;
         int lastScale = -1;
@@ -128,7 +95,6 @@ public final class LightVolume {
             int y = yz / sz;
             int z = yz - y * sz;
             for (int d = 0; d < 6; d++) {
-                // Only the coordinate along the direction changes, so only it needs a bounds check.
                 int pos = d < 2 ? x : d < 4 ? y : z;
                 int limit = d < 2 ? sx : d < 4 ? sy : sz;
                 int sign = (d & 1) == 0 ? 1 : -1;
@@ -137,7 +103,6 @@ public final class LightVolume {
                 boolean layer = tinted;
                 byte through = from;
                 int next = cell;
-                // Walks straight on through glass, so thick glass and glass in series tint once per block.
                 while (true) {
                     pos += sign;
                     if (pos < 0 || pos >= limit) {
@@ -203,7 +168,6 @@ public final class LightVolume {
         queue.push(tinted ? cell | TINT : cell, max(layer[cell]));
     }
 
-    /** The light one block further on, or 0 when it is used up. */
     private static int decay(int rgb) {
         int m = max(rgb);
         if (m <= STEP) {
@@ -218,7 +182,6 @@ public final class LightVolume {
                 | (rgb & 0xFF) * (f & 0xFF) / 255;
     }
 
-    /** -1 for clear cells, 0 for opaque ones, otherwise the glass colour scaled so its brightest channel is 255. */
     static int glassScale(int filter) {
         return glassScale(filter, glassStrength);
     }
@@ -243,7 +206,6 @@ public final class LightVolume {
         return Math.max(rgb >> 16 & 0xFF, Math.max(rgb >> 8 & 0xFF, rgb & 0xFF));
     }
 
-    /** Per-channel maximum; true when any channel grew. */
     private static boolean merge(int[] light, int cell, int rgb) {
         int old = light[cell];
         int r = Math.max(old >> 16 & 0xFF, rgb >> 16 & 0xFF);
@@ -257,7 +219,6 @@ public final class LightVolume {
         return true;
     }
 
-    /** Cells by brightness, brightest first, so most cells settle on their first visit. */
     private static final class Buckets {
         private final int[][] cells = new int[256][];
         private final int[] sizes = new int[256];

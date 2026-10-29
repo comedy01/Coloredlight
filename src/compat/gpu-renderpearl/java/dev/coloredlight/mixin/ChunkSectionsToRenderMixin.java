@@ -10,7 +10,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import com.llamalad7.mixinextras.sugar.Local;
 
-/** Binds the light volume next to the terrain uniforms for every terrain pass. */
 @Mixin(ChunkSectionsToRender.class)
 abstract class ChunkSectionsToRenderMixin {
     @Inject(method = "renderLayers", at = @At("HEAD"))
